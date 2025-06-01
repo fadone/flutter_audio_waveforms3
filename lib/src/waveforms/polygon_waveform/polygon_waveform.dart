@@ -154,6 +154,30 @@ class _PolygonWaveformState extends AudioWaveformState<PolygonWaveform> {
 
       final showHandle = widget.selectedDurationSegment == i;
 
+      final prevIndex = i - 1;
+      final nextIndex = i + 1;
+
+      double minStartHandlePosition;
+
+      double maxEndHandlePosition;
+
+      if (prevIndex < 0) {
+        minStartHandlePosition = _getPosition(Duration.zero);
+      } else {
+        final previousDurationSegment = widget.durationSegments![prevIndex];
+        minStartHandlePosition = _getPosition(previousDurationSegment.end);
+      }
+
+      if (nextIndex >= widget.durationSegments!.length) {
+        maxEndHandlePosition = _getPosition(maxDuration!) - 1;
+      } else {
+        final nextDurationSegment = widget.durationSegments![nextIndex];
+        maxEndHandlePosition = _getPosition(nextDurationSegment.start);
+      }
+
+      double maxStartHandlePosition = endHandlePosition;
+      double minEndHandlePosition = startHandlePosition;
+
       handles
         ..add(
           Handle(
@@ -161,7 +185,8 @@ class _PolygonWaveformState extends AudioWaveformState<PolygonWaveform> {
             width: 2,
             color: Colors.blue,
             position: startHandlePosition,
-            maxPosition: endHandlePosition,
+            minPosition: minStartHandlePosition,
+            maxPosition: maxStartHandlePosition,
             onPositionChanged: (position) {
               setState(() {
                 durationSegment.start = _calculateDuration(position);
@@ -177,7 +202,8 @@ class _PolygonWaveformState extends AudioWaveformState<PolygonWaveform> {
             width: 2,
             color: Colors.red,
             position: endHandlePosition,
-            minPosition: startHandlePosition,
+            minPosition: minEndHandlePosition,
+            maxPosition: maxEndHandlePosition,
             onPositionChanged: (position) {
               setState(() {
                 durationSegment.end = _calculateDuration(position);
@@ -202,6 +228,8 @@ class _PolygonWaveformState extends AudioWaveformState<PolygonWaveform> {
     return duration;
   }
 
+  final _waveformPadding = 24.0;
+
   @override
   Widget build(BuildContext context) {
     if (widget.samples.isEmpty) {
@@ -213,78 +241,94 @@ class _PolygonWaveformState extends AudioWaveformState<PolygonWaveform> {
     final waveformAlignment = this.waveformAlignment;
     final sampleWidth = this.sampleWidth;
 
-    return Stack(
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
-          width: widget.width,
+          width: _waveformPadding,
           height: widget.height * 0.9,
           color: Colors.black87,
         ),
-        GestureDetector(
-          onTapUp: (details) {
-            final dx = details.localPosition.dx;
-            final duration = _calculateDuration(dx);
-            widget.onTapUp?.call(duration);
-          },
-          child: RepaintBoundary(
-            child: CustomPaint(
-              size: Size(widget.width, widget.height),
-              isComplex: true,
-              painter: PolygonInActiveWaveformPainter(
-                samples: processedSamples,
-                style: widget.style,
-                color: widget.inactiveColor,
-                gradient: widget.inactiveGradient,
-                waveformAlignment: waveformAlignment,
-                sampleWidth: sampleWidth,
-              ),
+        Stack(
+          children: [
+            Container(
+              width: widget.width,
+              height: widget.height * 0.9,
+              color: Colors.black87,
             ),
-          ),
-        ),
-        if (showActiveWaveform && widget.selectedDurationSegment != null)
-          IgnorePointer(
-            child: CustomPaint(
-              isComplex: true,
-              size: Size(widget.width, widget.height),
-              painter: PolygonActiveWaveformPainter(
-                style: widget.style,
-                color: widget.activeColor,
-                activeSamples: processedSamples,
-                gradient: widget.activeGradient,
-                waveformAlignment: waveformAlignment,
-                sampleWidth: sampleWidth,
-                startIndex: _getIndex(
-                  widget
-                      .durationSegments![widget.selectedDurationSegment!].start,
-                ),
-                endIndex: _getIndex(
-                  widget.durationSegments![widget.selectedDurationSegment!].end,
+            GestureDetector(
+              onTapUp: (details) {
+                final dx = details.localPosition.dx;
+                final duration = _calculateDuration(dx);
+                widget.onTapUp?.call(duration);
+              },
+              child: RepaintBoundary(
+                child: CustomPaint(
+                  size: Size(widget.width, widget.height),
+                  isComplex: true,
+                  painter: PolygonInActiveWaveformPainter(
+                    samples: processedSamples,
+                    style: widget.style,
+                    color: widget.inactiveColor,
+                    gradient: widget.inactiveGradient,
+                    waveformAlignment: waveformAlignment,
+                    sampleWidth: sampleWidth,
+                  ),
                 ),
               ),
             ),
-          ),
-        Positioned(
-          left: 0,
-          bottom: 0,
-          child: Container(
-            width: widget.width,
-            height: widget.height * 0.1,
-            color: Theme.of(context).scaffoldBackgroundColor,
-          ),
+            if (showActiveWaveform && widget.selectedDurationSegment != null)
+              IgnorePointer(
+                child: CustomPaint(
+                  isComplex: true,
+                  size: Size(widget.width, widget.height),
+                  painter: PolygonActiveWaveformPainter(
+                    style: widget.style,
+                    color: widget.activeColor,
+                    activeSamples: processedSamples,
+                    gradient: widget.activeGradient,
+                    waveformAlignment: waveformAlignment,
+                    sampleWidth: sampleWidth,
+                    startIndex: _getIndex(
+                      widget.durationSegments![widget.selectedDurationSegment!]
+                          .start,
+                    ),
+                    endIndex: _getIndex(
+                      widget.durationSegments![widget.selectedDurationSegment!]
+                          .end,
+                    ),
+                  ),
+                ),
+              ),
+            Positioned(
+              left: 0,
+              bottom: 0,
+              child: Container(
+                width: widget.width,
+                height: widget.height * 0.1,
+                color: Theme.of(context).scaffoldBackgroundColor,
+              ),
+            ),
+            if (widget.durationSegments != null) ..._buildDurationSegments(),
+            if (widget.durationSegments != null) ..._buildHandles(),
+            Handle(
+              height: widget.height,
+              width: 2,
+              color: Colors.yellow,
+              position: activeSamples.length * sampleWidth,
+              onPositionChanged: (position) {
+                final duration = _calculateDuration(position);
+                widget.onTapUp?.call(duration);
+              },
+              showHandle: true,
+              playing: widget.playing,
+            ),
+          ],
         ),
-        if (widget.durationSegments != null) ..._buildDurationSegments(),
-        if (widget.durationSegments != null) ..._buildHandles(),
-        Handle(
-          height: widget.height,
-          width: 2,
-          color: Colors.yellow,
-          position: activeSamples.length * sampleWidth,
-          onPositionChanged: (position) {
-            final duration = _calculateDuration(position);
-            widget.onTapUp?.call(duration);
-          },
-          showHandle: true,
-          playing: widget.playing,
+        Container(
+          width: _waveformPadding,
+          height: widget.height * 0.9,
+          color: Colors.black87,
         ),
       ],
     );
