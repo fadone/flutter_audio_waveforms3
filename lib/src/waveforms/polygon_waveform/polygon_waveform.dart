@@ -316,6 +316,8 @@ class _PolygonWaveformState extends AudioWaveformState<PolygonWaveform> {
               width: 2,
               color: Colors.yellow,
               position: activeSamples.length * sampleWidth,
+              minPosition: _getPosition(Duration.zero),
+              maxPosition: _getPosition(maxDuration ?? Duration.zero) - 1,
               onPositionChanged: (position) {
                 final duration = _calculateDuration(position);
                 widget.onTapUp?.call(duration);
