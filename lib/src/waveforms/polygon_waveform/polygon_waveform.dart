@@ -165,14 +165,14 @@ class _PolygonWaveformState extends AudioWaveformState<PolygonWaveform> {
         minStartHandlePosition = _getPosition(Duration.zero);
       } else {
         final previousDurationSegment = widget.durationSegments![prevIndex];
-        minStartHandlePosition = _getPosition(previousDurationSegment.end);
+        minStartHandlePosition = _getPosition(previousDurationSegment.end) + 1;
       }
 
       if (nextIndex >= widget.durationSegments!.length) {
         maxEndHandlePosition = _getPosition(maxDuration!) - 1;
       } else {
         final nextDurationSegment = widget.durationSegments![nextIndex];
-        maxEndHandlePosition = _getPosition(nextDurationSegment.start);
+        maxEndHandlePosition = _getPosition(nextDurationSegment.start) - 1;
       }
 
       double maxStartHandlePosition = endHandlePosition;
